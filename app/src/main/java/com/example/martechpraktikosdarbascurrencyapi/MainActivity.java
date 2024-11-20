@@ -21,7 +21,7 @@ public class MainActivity extends AppCompatActivity {
 
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, currencyRates);
         listView.setAdapter(adapter);
-        
+
         DataLoader dataLoader = new DataLoader(this, currencyRates, adapter);
         dataLoader.execute("https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml");
     }
