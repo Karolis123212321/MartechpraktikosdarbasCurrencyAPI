@@ -1,4 +1,4 @@
-package com.example.currencyrates;
+package com.example.martechpraktikosdarbascurrencyapi;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
@@ -19,10 +19,12 @@ public class MainActivity extends AppCompatActivity {
         listView = findViewById(R.id.listView);
         currencyRates = new ArrayList<>();
 
+        // Inicijuojame adapterį ir priskiriame jį ListView elementui
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, currencyRates);
         listView.setAdapter(adapter);
 
+        // Paleidžiame duomenų nuskaitymo užduotį
         DataLoader dataLoader = new DataLoader(this, currencyRates, adapter);
-        dataLoader.execute("https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml");
+        dataLoader.execute("http://webservices.lb.lt/ExchangeRates/getCurrentExchangeRate");
     }
 }
