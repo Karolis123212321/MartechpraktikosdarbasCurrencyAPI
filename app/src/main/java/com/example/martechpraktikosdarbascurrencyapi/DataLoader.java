@@ -2,8 +2,9 @@ package com.example.martechpraktikosdarbascurrencyapi;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.util.Log;
 import android.widget.ArrayAdapter;
-import java.io.OutputStream;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -12,6 +13,7 @@ public class DataLoader extends AsyncTask<String, Void, ArrayList<String>> {
     private Context context;
     private ArrayList<String> currencyRates;
     private ArrayAdapter<String> adapter;
+    private static final String TAG = "DataLoader";
 
     public DataLoader(Context context, ArrayList<String> currencyRates, ArrayAdapter<String> adapter) {
         this.context = context;
@@ -23,33 +25,26 @@ public class DataLoader extends AsyncTask<String, Void, ArrayList<String>> {
     protected ArrayList<String> doInBackground(String... urls) {
         ArrayList<String> result = new ArrayList<>();
         try {
-            // Sukuriame SOAP užklausą
-            String soapRequest = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
-                    "<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" +
-                    "<soap:Body>" +
-                    "<getCurrentExchangeRate xmlns=\"http://webservices.lb.lt/ExchangeRates\">" +
-                    "<Currency>USD</Currency>" +
-                    "</getCurrentExchangeRate>" +
-                    "</soap:Body>" +
-                    "</soap:Envelope>";
+            Log.d(TAG, "Pradedame XML duomenų užklausą");
 
-            // Atlikti HTTP POST užklausą
+            // Atlikti HTTP GET užklausą
             URL url = new URL(urls[0]);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "text/xml; charset=utf-8");
-            connection.setRequestProperty("SOAPAction", "http://webservices.lb.lt/ExchangeRates/getCurrentExchangeRate");
-            connection.setDoOutput(true);
+            connection.setRequestMethod("GET");
+            connection.connect();
 
-            OutputStream outputStream = connection.getOutputStream();
-            outputStream.write(soapRequest.getBytes());
-            outputStream.flush();
-            outputStream.close();
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                InputStream inputStream = connection.getInputStream();
 
-            // Gauti ir išanalizuoti atsakymą
-            result = Parser.parseSOAPResponse(connection.getInputStream());
+                // Gauti ir išanalizuoti atsakymą
+                result = Parser.parseXMLResponse(inputStream);
+                Log.d(TAG, "Atsakymo analizė baigta, gautų elementų skaičius: " + result.size());
+            } else {
+                Log.e(TAG, "Klaida vykdant užklausą, atsakymo kodas: " + responseCode);
+            }
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "Klaida vykdant užklausą", e);
         }
         return result;
     }
@@ -57,6 +52,11 @@ public class DataLoader extends AsyncTask<String, Void, ArrayList<String>> {
     @Override
     protected void onPostExecute(ArrayList<String> result) {
         super.onPostExecute(result);
+        if (result.isEmpty()) {
+            Log.w(TAG, "Nėra gautų valiutos kursų rezultatų");
+        } else {
+            Log.d(TAG, "Atnaujiname ListView su gautais rezultatais");
+        }
         currencyRates.clear();
         currencyRates.addAll(result);
         adapter.notifyDataSetChanged();

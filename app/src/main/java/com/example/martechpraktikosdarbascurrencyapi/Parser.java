@@ -4,43 +4,49 @@ import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
+import android.util.Log;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import java.io.InputStream;
 import java.util.ArrayList;
 
 public class Parser {
-    public static ArrayList<String> parseSOAPResponse(InputStream inputStream) throws Exception {
+    private static final String TAG = "Parser";
+
+    public static ArrayList<String> parseXMLResponse(InputStream inputStream) throws Exception {
         ArrayList<String> result = new ArrayList<>();
 
-        // Naudojame SAX parserį SOAP atsakymui nuskaityti
+        // Naudojame SAX parserį XML atsakymui nuskaityti
         SAXParserFactory factory = SAXParserFactory.newInstance();
-        factory.setNamespaceAware(true);
         SAXParser saxParser = factory.newSAXParser();
         DefaultHandler handler = new DefaultHandler() {
-            boolean isExchangeRateResult = false;
+            boolean isCurrencyCode = false;
+            boolean isExchangeRate = false;
+            String currentCurrencyCode = "";
 
             @Override
             public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
-                if (localName.equalsIgnoreCase("getCurrentExchangeRateResult")) {
-                    isExchangeRateResult = true;
+                if (qName.equalsIgnoreCase("item")) {
+                    currentCurrencyCode = "";
+                } else if (qName.equalsIgnoreCase("targetCurrency")) {
+                    isCurrencyCode = true;
+                } else if (qName.equalsIgnoreCase("exchangeRate")) {
+                    isExchangeRate = true;
                 }
             }
 
             @Override
             public void characters(char[] ch, int start, int length) throws SAXException {
-                if (isExchangeRateResult) {
+                if (isCurrencyCode) {
+                    currentCurrencyCode = new String(ch, start, length).trim();
+                    isCurrencyCode = false;
+                } else if (isExchangeRate) {
                     String rate = new String(ch, start, length).trim();
-                    if (!rate.isEmpty()) {
-                        result.add("USD - " + rate);
+                    if (!currentCurrencyCode.isEmpty() && !rate.isEmpty()) {
+                        Log.d(TAG, "Gautas valiutos kursas: " + currentCurrencyCode + " - " + rate);
+                        result.add(currentCurrencyCode + " - " + rate);
                     }
-                }
-            }
-
-            @Override
-            public void endElement(String uri, String localName, String qName) throws SAXException {
-                if (localName.equalsIgnoreCase("getCurrentExchangeRateResult")) {
-                    isExchangeRateResult = false;
+                    isExchangeRate = false;
                 }
             }
         };
